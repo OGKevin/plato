@@ -38,6 +38,7 @@ pub mod reader;
 pub mod rotation_values;
 pub mod rounded_button;
 pub mod search_bar;
+pub mod settings_editor;
 pub mod sketch;
 pub mod slider;
 pub mod top_bar;
@@ -432,6 +433,7 @@ pub enum AppCmd {
     Sketch,
     Calculator,
     Dictionary { query: String, language: String },
+    SettingsEditor,
     TouchEvents,
     RotationValues,
 }
@@ -466,6 +468,8 @@ pub enum ViewId {
     PresetMenu,
     MarginCropperMenu,
     SearchMenu,
+    SettingsMenu,
+    SettingsKeyboardLayoutMenu,
     SketchMenu,
     RenameDocument,
     RenameDocumentInput,

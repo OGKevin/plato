@@ -36,6 +36,7 @@ use plato_core::view::menu::{Menu, MenuKind};
 use plato_core::view::notification::Notification;
 use plato_core::view::reader::Reader;
 use plato_core::view::rotation_values::RotationValues;
+use plato_core::view::settings_editor::SettingsEditor;
 use plato_core::view::sketch::Sketch;
 use plato_core::view::touch_events::TouchEvents;
 use plato_core::view::{handle_event, process_render_queue, wait_for_all};
@@ -1077,6 +1078,12 @@ pub fn run() -> Result<(), Error> {
                         &mut rq,
                         &mut context,
                     )),
+                    AppCmd::SettingsEditor => Box::new(SettingsEditor::new(
+                        context.fb.rect(),
+                        &tx,
+                        &mut rq,
+                        &mut context,
+                    )?),
                     AppCmd::TouchEvents => {
                         Box::new(TouchEvents::new(context.fb.rect(), &mut rq, &mut context))
                     }
