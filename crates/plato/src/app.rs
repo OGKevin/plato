@@ -256,6 +256,7 @@ fn set_wifi(enable: bool, context: &mut Context) {
 #[derive(PartialEq)]
 enum ExitStatus {
     Quit,
+    Restart,
     Reboot,
     PowerOff,
 }
@@ -1267,6 +1268,10 @@ pub fn run() -> Result<(), Error> {
                 let notif = Notification::new(msg, &tx, &mut rq, &mut context);
                 view.children_mut().push(Box::new(notif) as Box<dyn View>);
             }
+            Event::Select(EntryId::Restart) => {
+                exit_status = ExitStatus::Restart;
+                break;
+            }
             Event::Select(EntryId::Reboot) => {
                 exit_status = ExitStatus::Reboot;
                 break;
@@ -1334,6 +1339,9 @@ pub fn run() -> Result<(), Error> {
     save_toml(&context.settings, path).context("can't save settings")?;
 
     match exit_status {
+        ExitStatus::Restart => {
+            File::create("/tmp/restart").ok();
+        }
         ExitStatus::Reboot => {
             File::create("/tmp/reboot").ok();
         }
