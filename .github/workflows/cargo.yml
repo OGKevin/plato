@@ -15,7 +15,7 @@ jobs:
         with:
           components: rustfmt
       - name: Cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/
@@ -44,7 +44,7 @@ jobs:
           targets: arm-unknown-linux-gnueabihf
 
       - name: Cache Cargo registry
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/
@@ -56,7 +56,7 @@ jobs:
 
       - name: Cache Linaro toolchain
         id: cache-linaro
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/linaro-toolchain
           key: linaro-gcc-4.9.4-2017.01
@@ -71,7 +71,7 @@ jobs:
           rm gcc-linaro-4.9.4-2017.01-x86_64_arm-linux-gnueabihf.tar.xz
 
       - name: Cache thirdparty libraries
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             libs/
