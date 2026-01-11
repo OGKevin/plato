@@ -105,7 +105,15 @@ fi
 
 [ "$ORIG_BPP" ] && ./bin/utils/fbdepth -q -d 8
 
-LIBC_FATAL_STDERR_=1 ./plato >> info.log 2>&1
+while true; do
+	LIBC_FATAL_STDERR_=1 ./plato >> info.log 2>&1
+
+	if [ -f /tmp/restart ]; then
+		rm /tmp/restart
+	else
+		break
+	fi
+done
 
 [ "$ORIG_BPP" ] && ./bin/utils/fbdepth -q -d "$ORIG_BPP"
 

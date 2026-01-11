@@ -633,6 +633,7 @@ pub enum EntryId {
     New,
     Refresh,
     TakeScreenshot,
+    Restart,
     Reboot,
     Quit,
 }

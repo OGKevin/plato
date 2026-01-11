@@ -144,6 +144,7 @@ pub fn toggle_main_menu(
             EntryKind::Separator,
         ];
 
+        entries.push(EntryKind::Command("Restart".to_string(), EntryId::Restart));
         entries.push(EntryKind::Command("Reboot".to_string(), EntryId::Reboot));
         entries.push(EntryKind::Command("Quit".to_string(), EntryId::Quit));
 
