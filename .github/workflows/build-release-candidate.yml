@@ -32,7 +32,7 @@ jobs:
         run: |
           pr_data=$(gh pr view ${{ inputs.pr_number }} --repo ${{ github.repository }} --json headRefName,headRepository)
           echo "branch=$(echo $pr_data | jq -r '.headRefName')" >> $GITHUB_OUTPUT
-          echo "repo=$(echo $pr_data | jq -r '.headRepository.owner.login + \"/\" + .headRepository.name')" >> $GITHUB_OUTPUT
+          echo "repo=$(echo $pr_data | jq -r '.headRepository.owner.login + "/" + .headRepository.name')" >> $GITHUB_OUTPUT
 
       - uses: actions/checkout@v4
         with:
