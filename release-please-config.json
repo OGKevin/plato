@@ -4,27 +4,31 @@
   "bump-minor-pre-major": true,
   "bump-patch-for-minor-pre-major": true,
   "changelog-path": "CHANGELOG.md",
+  "include-component-in-tag": false,
   "packages": {
     "crates/core": {
-      "component": "plato-core"
+      "component": "plato-core",
+      "skip-github-release": true
     },
     "crates/plato": {
       "component": "plato"
     },
     "crates/emulator": {
-      "component": "emulator"
+      "component": "emulator",
+      "skip-github-release": true
     },
     "crates/importer": {
-      "component": "importer"
+      "component": "importer",
+      "skip-github-release": true
     },
     "crates/fetcher": {
-      "component": "fetcher"
+      "component": "fetcher",
+      "skip-github-release": true
     }
   },
   "plugins": [
     {
-      "type": "cargo-workspace",
-      "merge": false
+      "type": "cargo-workspace"
     },
     {
       "type": "linked-versions",
