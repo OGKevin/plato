@@ -16,6 +16,7 @@ pub mod clock;
 pub mod common;
 pub mod dialog;
 pub mod dictionary;
+pub mod file_chooser;
 pub mod filler;
 pub mod frontlight;
 pub mod home;
@@ -429,6 +430,8 @@ pub enum Event {
     Back,
     Quit,
     WakeUp,
+    Hold(EntryId),
+    FileChooserClosed(Option<PathBuf>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -502,6 +505,7 @@ pub enum ViewId {
     TableOfContents,
     MessageNotif(Id),
     SubMenu(u8),
+    FileChooser,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -647,6 +651,7 @@ pub enum EntryId {
     Restart,
     Reboot,
     Quit,
+    FileEntry(PathBuf),
 }
 
 impl EntryKind {
