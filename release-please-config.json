@@ -23,6 +23,12 @@
       "skip-github-release": true,
       "skip-changelog": true
     },
+    "crates/ui-dev": {
+      "release-type": "rust",
+      "component": "ui-dev",
+      "skip-github-release": true,
+      "skip-changelog": true
+    },
     "crates/emulator": {
       "release-type": "rust",
       "component": "emulator",
@@ -48,12 +54,13 @@
       "type": "linked-versions",
       "groupName": "plato",
       "components": [
-        "plato",
-        "plato-core",
-        "plato-bin",
         "emulator",
+        "fetcher",
         "importer",
-        "fetcher"
+        "plato",
+        "plato-bin",
+        "plato-core",
+        "ui-dev"
       ]
     }
   ]
