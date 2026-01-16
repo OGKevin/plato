@@ -16,6 +16,7 @@ pub mod clock;
 pub mod common;
 pub mod dialog;
 pub mod dictionary;
+pub mod file_chooser;
 pub mod filler;
 pub mod frontlight;
 pub mod home;
@@ -38,6 +39,7 @@ pub mod reader;
 pub mod rotation_values;
 pub mod rounded_button;
 pub mod search_bar;
+pub mod settings_editor;
 pub mod sketch;
 pub mod slider;
 pub mod toggleable_keyboard;
@@ -57,7 +59,7 @@ use crate::input::{DeviceEvent, FingerStatus};
 use crate::metadata::{
     Info, Margin, PageScheme, ScrollMode, SimpleStatus, SortMethod, TextAlign, ZoomMode,
 };
-use crate::settings::{ButtonScheme, FirstColumn, RotationLock, SecondColumn};
+use crate::settings::{self, ButtonScheme, FirstColumn, RotationLock, SecondColumn};
 use downcast_rs::{impl_downcast, Downcast};
 use fxhash::FxHashMap;
 use std::collections::VecDeque;
@@ -386,6 +388,12 @@ pub enum Event {
     ToggleBookMenu(Rectangle, usize),
     TogglePresetMenu(Rectangle, usize),
     SubMenu(Rectangle, Vec<EntryKind>),
+    OpenSettingsCategory(settings_editor::Category),
+    UpdateSettings(settings::Settings),
+    EditLibrary(usize),
+    UpdateLibrary(usize, Box<settings::LibrarySettings>),
+    AddLibrary,
+    DeleteLibrary(usize),
     ProcessLine(LineOrigin, String),
     History(CycleDir, bool),
     Toggle(ViewId),
@@ -426,6 +434,10 @@ pub enum Event {
     Back,
     Quit,
     WakeUp,
+    Hold(EntryId),
+    /// The file chooser was closed.
+    ///  The `Option<PathBuf>` contains the selected path, if any.
+    FileChooserClosed(Option<PathBuf>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -433,6 +445,7 @@ pub enum AppCmd {
     Sketch,
     Calculator,
     Dictionary { query: String, language: String },
+    SettingsEditor,
     TouchEvents,
     RotationValues,
 }
@@ -467,6 +480,14 @@ pub enum ViewId {
     PresetMenu,
     MarginCropperMenu,
     SearchMenu,
+    SettingsMenu,
+    SettingsValueMenu,
+    SettingsCategoryEditor,
+    LibraryEditor,
+    LibraryRename,
+    LibraryRenameInput,
+    AutoSuspendInput,
+    AutoPowerOffInput,
     SketchMenu,
     RenameDocument,
     RenameDocumentInput,
@@ -495,6 +516,7 @@ pub enum ViewId {
     TableOfContents,
     MessageNotif(Id),
     SubMenu(u8),
+    FileChooser,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -620,7 +642,16 @@ pub enum EntryId {
     SetSearchTarget(Option<String>),
     SetInputText(ViewId, String),
     SetKeyboardLayout(String),
+    EditLibraryName,
+    EditLibraryPath,
+    SetLibraryMode(settings::LibraryMode),
+    DeleteLibrary(usize),
     ToggleShowHidden,
+    // TODO: Make one entryId for settings editor
+    ToggleSleepCover,
+    ToggleAutoShare,
+    EditAutoSuspend,
+    EditAutoPowerOff,
     ToggleFuzzy,
     ToggleInverted,
     ToggleDithered,
@@ -637,6 +668,7 @@ pub enum EntryId {
     Restart,
     Reboot,
     Quit,
+    FileEntry(PathBuf),
 }
 
 impl EntryKind {

@@ -31,6 +31,7 @@ use plato_core::view::menu::{Menu, MenuKind};
 use plato_core::view::notification::Notification;
 use plato_core::view::reader::Reader;
 use plato_core::view::rotation_values::RotationValues;
+use plato_core::view::settings_editor::SettingsEditor;
 use plato_core::view::sketch::Sketch;
 use plato_core::view::touch_events::TouchEvents;
 use plato_core::view::{handle_event, process_render_queue, wait_for_all, RenderData, RenderQueue};
@@ -555,6 +556,10 @@ fn main() -> Result<(), Error> {
                             &mut rq,
                             &mut context,
                         )),
+                        AppCmd::SettingsEditor => Box::new(
+                            SettingsEditor::new(context.fb.rect(), &tx, &mut rq, &mut context)
+                                .build()?,
+                        ),
                         AppCmd::TouchEvents => {
                             Box::new(TouchEvents::new(context.fb.rect(), &mut rq, &mut context))
                         }
@@ -700,6 +705,9 @@ fn main() -> Result<(), Error> {
                 }
                 Event::Select(EntryId::SetButtonScheme(button_scheme)) => {
                     context.settings.button_scheme = button_scheme;
+
+                    // Re-dispatch event to view hierarchy so UI can update
+                    handle_event(view.as_mut(), &evt, &tx, &mut bus, &mut rq, &mut context);
                 }
                 Event::Select(EntryId::ToggleInverted) => {
                     context.fb.toggle_inverted();
