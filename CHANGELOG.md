@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.46](https://github.com/OGKevin/plato/compare/v0.9.45...v0.9.46) (2026-01-16)
+
+
+### Features
+
+* add toggleable keyboard component ([#50](https://github.com/OGKevin/plato/issues/50)) ([4b0226e](https://github.com/OGKevin/plato/commit/4b0226ec04a500b9efab48d21a776542758eb296))
+
 ## [0.9.45](https://github.com/OGKevin/plato/compare/v0.9.44...v0.9.45) (2026-01-12)
 
 
