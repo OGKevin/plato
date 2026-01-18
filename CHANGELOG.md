@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.46](https://github.com/OGKevin/plato/compare/v0.9.45...v0.9.46) (2026-01-18)
+
+
+### Bug Fixes
+
+* Kobo build scripts ([#61](https://github.com/OGKevin/plato/issues/61)) ([1db7340](https://github.com/OGKevin/plato/commit/1db7340f3771cd145a021f310f409f0220e1a351))
+
 ## [0.9.45](https://github.com/OGKevin/plato/compare/v0.9.44...v0.9.45) (2026-01-12)
 
 
