@@ -269,10 +269,15 @@ impl OtaClient {
 
         println!("[OTA] Found {} artifacts", artifacts.artifacts.len());
 
+        #[cfg(feature = "test")]
+        let artifact_name_pattern = format!("cadmus-kobo-test-pr{}", pr_number);
+        #[cfg(not(feature = "test"))]
+        let artifact_name_pattern = format!("cadmus-kobo-pr{}", pr_number);
+
         let artifact = artifacts
             .artifacts
             .iter()
-            .find(|a| a.name.starts_with("cadmus-kobo-pr"))
+            .find(|a| a.name.starts_with(artifact_name_pattern.as_str()))
             .ok_or(OtaError::NoArtifacts(pr_number))?;
 
         println!(
@@ -371,14 +376,19 @@ impl OtaClient {
         let mut kobo_root_data = Vec::new();
         let mut found = false;
 
+        #[cfg(not(feature = "test"))]
+        let kobo_root_name = "KoboRoot.tgz";
+        #[cfg(feature = "test")]
+        let kobo_root_name = "KoboRoot-test.tgz";
+
         for i in 0..archive.len() {
             let mut entry = archive.by_index(i)?;
             let entry_name = entry.name().to_string();
 
             println!("[OTA] Checking entry: {}", entry_name);
 
-            if entry_name.eq("KoboRoot.tgz") {
-                println!("[OTA] Found KoboRoot.tgz at: {}", entry_name);
+            if entry_name.eq(kobo_root_name) {
+                println!("[OTA] Found at {}: {}", kobo_root_name, entry_name);
                 entry.read_to_end(&mut kobo_root_data)?;
                 found = true;
                 break;
@@ -386,13 +396,15 @@ impl OtaClient {
         }
 
         if !found {
-            return Err(OtaError::DeploymentError(
-                "KoboRoot.tgz not found in artifact".to_string(),
-            ));
+            return Err(OtaError::DeploymentError(format!(
+                "{} not found in artifact",
+                kobo_root_name
+            )));
         }
 
         println!(
-            "[OTA] Extracted {} bytes from KoboRoot.tgz",
+            "[OTA] Extracted {} bytes from {}",
+            kobo_root_name,
             kobo_root_data.len()
         );
 
