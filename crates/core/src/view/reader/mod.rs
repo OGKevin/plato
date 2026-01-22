@@ -4279,30 +4279,25 @@ impl View for Reader {
                         let loc = Location::LocalUri(self.current_page, link.text.clone());
                         if let Some(location) = doc.resolve_location(loc) {
                             hub.send(Event::GoTo(location)).ok();
-                        } else {
-                            if link.text.starts_with("https:") || link.text.starts_with("http:") {
-                                if let Some(path) = context.settings.external_urls_queue.as_ref() {
-                                    if let Ok(mut file) =
-                                        OpenOptions::new().create(true).append(true).open(path)
-                                    {
-                                        if let Err(e) = writeln!(file, "{}", link.text) {
-                                            eprintln!(
-                                                "Couldn't write to {}: {:#}.",
-                                                path.display(),
-                                                e
-                                            );
-                                        } else {
-                                            let message = format!("Queued {}.", link.text);
-                                            let notif = Notification::new(
-                                                None, message, false, hub, rq, context,
-                                            );
-                                            self.children.push(Box::new(notif) as Box<dyn View>);
-                                        }
+                        } else if link.text.starts_with("https:") || link.text.starts_with("http:")
+                        {
+                            if let Some(path) = context.settings.external_urls_queue.as_ref() {
+                                if let Ok(mut file) =
+                                    OpenOptions::new().create(true).append(true).open(path)
+                                {
+                                    if let Err(e) = writeln!(file, "{}", link.text) {
+                                        eprintln!("Couldn't write to {}: {:#}.", path.display(), e);
+                                    } else {
+                                        let message = format!("Queued {}.", link.text);
+                                        let notif = Notification::new(
+                                            None, message, false, hub, rq, context,
+                                        );
+                                        self.children.push(Box::new(notif) as Box<dyn View>);
                                     }
                                 }
-                            } else {
-                                eprintln!("Can't resolve URI: {}.", link.text);
                             }
+                        } else {
+                            eprintln!("Can't resolve URI: {}.", link.text);
                         }
                     }
                     return true;
