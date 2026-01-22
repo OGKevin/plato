@@ -2,7 +2,10 @@
 name = "cadmus-core"
 version = "0.9.45"
 edition = "2021"
-authors = ["Cadmus Authors", "Bastien Dejean <nihilhill@gmail.com> (original Plato author)"]
+authors = [
+    "Cadmus Authors",
+    "Bastien Dejean <nihilhill@gmail.com> (original Plato author)",
+]
 
 [lib]
 crate-type = ["rlib"]
@@ -32,6 +35,7 @@ nix = { version = "0.30.1", features = ["fs", "ioctl"] }
 indexmap = { version = "2.13.0", features = ["serde"] }
 anyhow = "1.0.100"
 thiserror = "2.0.17"
+secrecy = { version = "0.10", features = ["serde"] }
 walkdir = "2.5.0"
 globset = "0.4.18"
 fxhash = "0.2.1"
@@ -50,6 +54,9 @@ reqwest = { version = "0.13.1", default-features = false, features = [
 ] }
 rustls = { workspace = true }
 webpki-roots = "1.0.5"
+
+[dev-dependencies]
+tempfile = "3.14"
 
 [features]
 default = []

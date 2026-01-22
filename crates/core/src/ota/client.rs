@@ -1,5 +1,6 @@
 use reqwest::blocking::Client;
 use rustls::RootCertStore;
+use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -24,10 +25,15 @@ const MAX_RETRIES: usize = 3;
 /// - Downloading build artifacts
 /// - Extracting and deploying updates
 ///
-/// Requires a GitHub personal access token with appropriate permissions.
+/// # Security
+///
+/// The GitHub personal access token is wrapped in `SecretString` from the
+/// `secrecy` crate to prevent accidental exposure in logs, debug output, or
+/// error messages. The token is automatically wiped from memory when dropped.
+/// Access to the token value requires explicit use of `.expose_secret()`.
 pub struct OtaClient {
     client: Client,
-    token: String,
+    token: SecretString,
 }
 
 /// Error types that can occur during OTA operations.
@@ -134,13 +140,19 @@ impl OtaClient {
     ///
     /// # Arguments
     ///
-    /// * `github_token` - Personal access token for GitHub API authentication
+    /// * `github_token` - Personal access token wrapped in `SecretString`
+    ///   for secure handling. The token requires workflow artifact read permissions.
     ///
     /// # Errors
     ///
     /// Returns `OtaError::TlsConfig` if the HTTP client fails to initialize
     /// with the provided TLS configuration.
-    pub fn new(github_token: String) -> Result<Self, OtaError> {
+    ///
+    /// # Security
+    ///
+    /// The token is stored securely and will never appear in debug output or logs.
+    /// It is only exposed when making authenticated API requests.
+    pub fn new(github_token: SecretString) -> Result<Self, OtaError> {
         println!("[OTA] Initializing OTA client with webpki-roots certificates");
 
         let root_store = create_webpki_root_store();
@@ -204,7 +216,7 @@ impl OtaClient {
     where
         F: Fn(OtaProgress),
     {
-        check_disk_space()?;
+        check_disk_space("/tmp")?;
 
         progress_callback(OtaProgress::CheckingPr);
         println!("[OTA] Checking PR #{}", pr_number);
@@ -217,7 +229,10 @@ impl OtaClient {
         let pr: PullRequest = self
             .client
             .get(&pr_url)
-            .header("Authorization", format!("Bearer {}", self.token))
+            .header(
+                "Authorization",
+                format!("Bearer {}", self.token.expose_secret()),
+            )
             .send()?
             .error_for_status()
             .map_err(|_| OtaError::PrNotFound(pr_number))?
@@ -237,7 +252,10 @@ impl OtaClient {
         let runs: WorkflowRunsResponse = self
             .client
             .get(&runs_url)
-            .header("Authorization", format!("Bearer {}", self.token))
+            .header(
+                "Authorization",
+                format!("Bearer {}", self.token.expose_secret()),
+            )
             .send()?
             .error_for_status()
             .map_err(|e| OtaError::Api(format!("Failed to fetch workflow runs: {}", e)))?
@@ -261,7 +279,10 @@ impl OtaClient {
         let artifacts: ArtifactsResponse = self
             .client
             .get(&artifacts_url)
-            .header("Authorization", format!("Bearer {}", self.token))
+            .header(
+                "Authorization",
+                format!("Bearer {}", self.token.expose_secret()),
+            )
             .send()?
             .error_for_status()
             .map_err(|e| OtaError::Api(format!("Failed to fetch artifacts: {}", e)))?
@@ -404,11 +425,27 @@ impl OtaClient {
 
         println!(
             "[OTA] Extracted {} bytes from {}",
-            kobo_root_name,
-            kobo_root_data.len()
+            kobo_root_data.len(),
+            kobo_root_name
         );
 
+        #[cfg(not(test))]
         let deploy_path = PathBuf::from("/mnt/onboard/.kobo/KoboRoot.tgz");
+
+        #[cfg(test)]
+        let deploy_path = {
+            std::env::temp_dir()
+                .join("test-kobo-deployment")
+                .join("KoboRoot.tgz")
+        };
+
+        #[cfg(test)]
+        {
+            if let Some(parent) = deploy_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+        }
+
         let mut file = File::create(&deploy_path)?;
         file.write_all(&kobo_root_data)?;
 
@@ -496,7 +533,10 @@ impl OtaClient {
         let response = self
             .client
             .get(url)
-            .header("Authorization", format!("Bearer {}", self.token))
+            .header(
+                "Authorization",
+                format!("Bearer {}", self.token.expose_secret()),
+            )
             .header("Range", range_header)
             .send()?
             .error_for_status()
@@ -507,19 +547,26 @@ impl OtaClient {
     }
 }
 
-/// Verifies sufficient disk space is available in /tmp for download.
+/// Verifies sufficient disk space is available in the specified path for download.
 ///
 /// Requires at least 100MB of free space for artifact download and extraction.
+///
+/// # Arguments
+///
+/// * `path` - The path to check for available disk space
 ///
 /// # Errors
 ///
 /// Returns `OtaError::InsufficientSpace` if less than 100MB is available.
-fn check_disk_space() -> Result<(), OtaError> {
+fn check_disk_space(path: &str) -> Result<(), OtaError> {
     use nix::sys::statvfs::statvfs;
 
-    let stat = statvfs("/tmp")?;
+    let stat = statvfs(path)?;
     let available_mb = (stat.blocks_available() * stat.block_size()) / (1024 * 1024);
-    println!("[OTA] Available disk space in /tmp: {} MB", available_mb);
+    println!(
+        "[OTA] Available disk space in {}: {} MB",
+        path, available_mb
+    );
 
     if available_mb < 100 {
         return Err(OtaError::InsufficientSpace(available_mb as u64));
@@ -542,4 +589,106 @@ fn create_webpki_root_store() -> RootCertStore {
         root_store.len()
     );
     root_store
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_create_webpki_root_store() {
+        let root_store = create_webpki_root_store();
+        assert!(
+            !root_store.is_empty(),
+            "Root certificate store should not be empty"
+        );
+    }
+
+    #[test]
+    fn test_create_webpki_root_store_has_certificates() {
+        let root_store = create_webpki_root_store();
+        assert!(
+            root_store.len() > 50,
+            "Expected at least 50 root certificates, got {}",
+            root_store.len()
+        );
+    }
+
+    #[test]
+    fn test_ota_error_from_reqwest_error() {
+        let reqwest_error = reqwest::blocking::Client::new()
+            .get("http://invalid-url-that-does-not-exist-12345.com")
+            .send()
+            .unwrap_err();
+        let ota_error: OtaError = reqwest_error.into();
+        assert!(matches!(ota_error, OtaError::Request(_)));
+    }
+
+    #[test]
+    fn test_check_disk_space_sufficient() {
+        let temp_dir = TempDir::new().unwrap();
+        let result = check_disk_space(temp_dir.path().to_str().unwrap());
+        assert!(
+            result.is_ok(),
+            "Should have sufficient disk space in temp directory"
+        );
+    }
+
+    #[test]
+    fn test_extract_and_deploy_success() {
+        rustls::crypto::ring::default_provider()
+            .install_default()
+            .ok();
+
+        let client = OtaClient::new(SecretString::from("test_token".to_string())).unwrap();
+        let fixture_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("src/ota/tests/fixtures/test_artifact.zip");
+
+        let result = client.extract_and_deploy(fixture_path);
+
+        assert!(
+            result.is_ok(),
+            "Deployment should succeed: {:?}",
+            result.err()
+        );
+
+        let deploy_path = result.unwrap();
+        assert!(
+            deploy_path.exists(),
+            "Deployed file should exist at {:?}",
+            deploy_path
+        );
+
+        let content = std::fs::read_to_string(&deploy_path).unwrap();
+        assert!(
+            content.contains("Mock KoboRoot.tgz"),
+            "Deployed file should contain mock content"
+        );
+
+        std::fs::remove_file(&deploy_path).ok();
+    }
+
+    #[test]
+    fn test_extract_and_deploy_missing_koboroot() {
+        rustls::crypto::ring::default_provider()
+            .install_default()
+            .ok();
+
+        let client = OtaClient::new(SecretString::from("test_token".to_string())).unwrap();
+        let fixture_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("src/ota/tests/fixtures/empty_artifact.zip");
+
+        let result = client.extract_and_deploy(fixture_path);
+        assert!(result.is_err(), "Should fail when KoboRoot.tgz is missing");
+
+        if let Err(OtaError::DeploymentError(msg)) = result {
+            assert!(
+                msg.contains("not found in artifact"),
+                "Error should mention missing file"
+            );
+        } else {
+            panic!("Expected DeploymentError");
+        }
+    }
 }

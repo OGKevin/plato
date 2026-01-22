@@ -14,6 +14,7 @@ use crate::ota::{OtaClient, OtaProgress};
 use crate::unit::scale_by_dpi;
 use crate::view::filler::Filler;
 use crate::view::BIG_BAR_HEIGHT;
+use secrecy::SecretString;
 use std::thread;
 
 /// Attempts to show the OTA update view with validation checks.
@@ -85,12 +86,17 @@ pub fn show_ota_view(
 /// - On-screen keyboard for text entry
 ///
 /// Download and deployment happens asynchronously in a background thread.
+///
+/// # Security
+///
+/// The GitHub token is securely stored using `SecretString` to prevent
+/// accidental exposure in logs or debug output.
 pub struct OtaView {
     id: Id,
     rect: Rectangle,
     children: Vec<Box<dyn View>>,
     view_id: ViewId,
-    github_token: String,
+    github_token: SecretString,
     keyboard_index: usize,
 }
 
@@ -103,9 +109,10 @@ impl OtaView {
     ///
     /// # Arguments
     ///
-    /// * `github_token` - GitHub personal access token for API authentication
+    /// * `github_token` - GitHub personal access token wrapped in `SecretString`
+    ///   for secure handling
     /// * `context` - Application context containing fonts and device information
-    pub fn new(github_token: String, context: &mut Context) -> OtaView {
+    pub fn new(github_token: SecretString, context: &mut Context) -> OtaView {
         let id = ID_FEEDER.next();
         let view_id = ViewId::OtaView;
         let mut children: Vec<Box<dyn View>> = Vec::new();

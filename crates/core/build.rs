@@ -63,8 +63,8 @@ fn get_version_info() -> Result<(String, Option<String>), VarError> {
         })
         .unwrap_or_else(|| "unknown".to_string());
 
-    let pr_info = env::var("CI").ok();
-    match pr_info {
+    let ci_var = env::var("CI").ok();
+    match ci_var {
         Some(_) => {
             if !env::var("GITHUB_EVENT_NAME")
                 .unwrap_or_default()
