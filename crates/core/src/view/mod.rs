@@ -9,6 +9,7 @@
 //! be written to the main event channel and will be sent to every leaf in one of the next loop
 //! iterations.
 
+pub mod action_label;
 pub mod battery;
 pub mod button;
 pub mod calculator;
@@ -16,6 +17,7 @@ pub mod clock;
 pub mod common;
 pub mod dialog;
 pub mod dictionary;
+pub mod file_chooser;
 pub mod filler;
 pub mod frontlight;
 pub mod home;
@@ -41,6 +43,7 @@ pub mod reader;
 pub mod rotation_values;
 pub mod rounded_button;
 pub mod search_bar;
+pub mod settings_editor;
 pub mod sketch;
 pub mod slider;
 pub mod toggleable_keyboard;
@@ -60,7 +63,7 @@ use crate::input::{DeviceEvent, FingerStatus};
 use crate::metadata::{
     Info, Margin, PageScheme, ScrollMode, SimpleStatus, SortMethod, TextAlign, ZoomMode,
 };
-use crate::settings::{ButtonScheme, FirstColumn, RotationLock, SecondColumn};
+use crate::settings::{self, ButtonScheme, FirstColumn, RotationLock, SecondColumn};
 use downcast_rs::{impl_downcast, Downcast};
 use fxhash::FxHashMap;
 use std::collections::VecDeque;
@@ -391,6 +394,12 @@ pub enum Event {
     ToggleBookMenu(Rectangle, usize),
     TogglePresetMenu(Rectangle, usize),
     SubMenu(Rectangle, Vec<EntryKind>),
+    OpenSettingsCategory(settings_editor::Category),
+    UpdateSettings(Box<settings::Settings>),
+    EditLibrary(usize),
+    UpdateLibrary(usize, Box<settings::LibrarySettings>),
+    AddLibrary,
+    DeleteLibrary(usize),
     ProcessLine(LineOrigin, String),
     History(CycleDir, bool),
     Toggle(ViewId),
@@ -431,6 +440,10 @@ pub enum Event {
     Back,
     Quit,
     WakeUp,
+    Hold(EntryId),
+    /// The file chooser was closed.
+    ///  The `Option<PathBuf>` contains the selected path, if any.
+    FileChooserClosed(Option<PathBuf>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -438,6 +451,7 @@ pub enum AppCmd {
     Sketch,
     Calculator,
     Dictionary { query: String, language: String },
+    SettingsEditor,
     TouchEvents,
     RotationValues,
 }
@@ -472,6 +486,18 @@ pub enum ViewId {
     PresetMenu,
     MarginCropperMenu,
     SearchMenu,
+    // TODO(ogkevin): merge all these settings editor view IDs into one
+    SettingsMenu,
+    SettingsValueMenu,
+    SettingsCategoryEditor,
+    LibraryEditor,
+    LibraryRename,
+    LibraryRenameInput,
+    AutoSuspendInput,
+    AutoPowerOffInput,
+    IntermissionSuspendInput,
+    IntermissionPowerOffInput,
+    IntermissionShareInput,
     SketchMenu,
     RenameDocument,
     RenameDocumentInput,
@@ -502,6 +528,7 @@ pub enum ViewId {
     SubMenu(u8),
     OtaView,
     OtaPrInput,
+    FileChooser,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -627,7 +654,18 @@ pub enum EntryId {
     SetSearchTarget(Option<String>),
     SetInputText(ViewId, String),
     SetKeyboardLayout(String),
+    // TODO(ogkevin): Make one entryId for settings editor
+    EditLibraryName,
+    EditLibraryPath,
+    SetLibraryMode(settings::LibraryMode),
+    DeleteLibrary(usize),
+    SetIntermission(settings::IntermKind, settings::IntermissionDisplay),
+    EditIntermissionImage(settings::IntermKind),
     ToggleShowHidden,
+    ToggleSleepCover,
+    ToggleAutoShare,
+    EditAutoSuspend,
+    EditAutoPowerOff,
     ToggleFuzzy,
     ToggleInverted,
     ToggleDithered,
@@ -645,6 +683,7 @@ pub enum EntryId {
     Reboot,
     Quit,
     CheckForUpdates,
+    FileEntry(PathBuf),
 }
 
 impl EntryKind {
