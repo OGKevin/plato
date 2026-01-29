@@ -273,14 +273,17 @@ impl View for Terminal {
             }
             Event::WakeUp => {
                 if let Ok(mut buffer) = self.double_buffer.lock() {
-                    if buffer.dirty {
-                        buffer.dirty = false;
-                        if let Some(dirty_rect) = buffer.dirty_rect.take() {
-                            let update_rect = Rectangle::new(
-                                Point::new(self.rect.min.x + dirty_rect.min.x, self.rect.min.y + dirty_rect.min.y),
-                                Point::new(self.rect.min.x + dirty_rect.max.x, self.rect.min.y + dirty_rect.max.y),
-                            );
-                            rq.add(RenderData::no_wait(self.id, update_rect, UpdateMode::FastMono));
+                    if buffer.is_dirty() {
+                        if buffer.take_full_refresh() {
+                            rq.add(RenderData::no_wait(self.id, self.rect, UpdateMode::Gui));
+                        } else {
+                            for dirty_rect in buffer.drain_dirty_rects() {
+                                let update_rect = Rectangle::new(
+                                    Point::new(self.rect.min.x + dirty_rect.min.x, self.rect.min.y + dirty_rect.min.y),
+                                    Point::new(self.rect.min.x + dirty_rect.max.x, self.rect.min.y + dirty_rect.max.y),
+                                );
+                                rq.add(RenderData::no_wait(self.id, update_rect, UpdateMode::FastMono));
+                            }
                         }
                     }
                 }
